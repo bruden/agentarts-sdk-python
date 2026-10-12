@@ -13,8 +13,9 @@ import requests
 
 from agentarts.sdk.utils.constant import get_memory_endpoint, get_region
 from agentarts.sdk.utils.signer import SDKSigner
+from agentarts.sdk.utils.user_agent import build_user_agent
 
-from .http_client import APIException
+from .http_client import APIException, MemoryAPIException
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,6 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
         """Get headers with API_KEY authentication."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk-python/0.0.1",
         }
 
         api_key = self._api_key or os.getenv("HUAWEICLOUD_SDK_MEMORY_API_KEY")
@@ -142,7 +142,6 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         """Get base headers for control plane requests."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk/0.0.1",
         }
 
         if hasattr(self, "client_request_id"):
@@ -186,10 +185,6 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
             body=body_str,
             query_params=params_list,
         )
-
-
-class MemoryAPIException(APIException):
-    """Custom exception for Memory API errors."""
 
 
 class MemoryHttpService:
@@ -240,6 +235,8 @@ class MemoryHttpService:
             self._enable_signing = enable_signing
 
         self.session = requests.Session()
+        original_ua = self.session.headers.get("User-Agent", "")
+        self.session.headers["User-Agent"] = build_user_agent(original_ua)
 
         self._auth_strategy = self._create_authentication_strategy(endpoint_type)
 
@@ -337,7 +334,15 @@ class MemoryHttpService:
 
             if response.status_code in {200, 201}:
                 if response.headers.get("content-type", "").startswith("application/json"):
-                    return response.json()
+                    try:
+                        return response.json()
+                    except ValueError as e:  # 覆盖 requests.exceptions.JSONDecodeError
+                        # 2xx 但响应体非合法 JSON：解析错误，区别于网络错误
+                        raise MemoryAPIException(
+                            status_code=response.status_code,
+                            error_code="PARSE_ERROR",
+                            error_msg=f"Failed to parse JSON response: {e}",
+                        ) from e
                 return {"response": response.text}
             if response.status_code == 204:
                 return {}
@@ -358,12 +363,12 @@ class MemoryHttpService:
         except Exception as e:
             if isinstance(e, MemoryAPIException):
                 raise
-            logger.exception(f"HTTP request failed: {e}")
+            logger.warning(f"Network request failed: {e}")
             raise MemoryAPIException(
-                status_code=503,
+                status_code=0,  # 0 = 无 HTTP 响应（对齐 BaseHTTPClient 先例）
                 error_code="NETWORK_ERROR",
-                error_msg=str(e)
-            )
+                error_msg=str(e),
+            ) from e  # 保留原始异常链，用户可访问 e.__cause__
 
     def create_space(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new memory space.

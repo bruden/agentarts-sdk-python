@@ -24,6 +24,7 @@ from typing_extensions import Self
 
 from agentarts.sdk.utils.signer import SDKSigner
 from agentarts.sdk.utils.signer_v11 import V11Signer
+from agentarts.sdk.utils.user_agent import build_user_agent
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,27 @@ class APIException(Exception):
         self.error_code = error_code
         self.error_msg = error_msg
         super().__init__(f"[{error_code}] HTTP {status_code}: {error_msg}")
+
+
+class MemoryAPIException(APIException):
+    """Custom exception for Memory API errors.
+
+    分类约定：
+    - 网络错误：status_code=0, error_code="NETWORK_ERROR"（请求未获得服务器响应）。
+    - 解析错误：status_code 为实际 HTTP 状态码, error_code="PARSE_ERROR"
+      （2xx 但响应体非合法 JSON）。
+    - 服务端错误：status_code 为实际 HTTP 状态码。
+    """
+
+    @property
+    def is_network_error(self) -> bool:
+        """True 表示请求未获得服务器响应（网络层故障）。"""
+        return self.status_code == 0 and self.error_code == "NETWORK_ERROR"
+
+    @property
+    def retryable(self) -> bool:
+        """是否建议重试：网络错误、429 限流、5xx 服务端错误。"""
+        return self.is_network_error or self.status_code in (429, 500, 502, 503, 504)
 
 
 class SignMode(Enum):
@@ -184,6 +206,8 @@ class BaseHTTPClient:
         self._config = config or RequestConfig()
         self._session = requests.Session()
         self._session.headers.update(self._config.headers)
+        original_ua = self._session.headers.get("User-Agent", "")
+        self._session.headers["User-Agent"] = build_user_agent(original_ua)
         self._open_ak_sk = open_ak_sk
         self._sign_mode = sign_mode
         self._region_id = region_id

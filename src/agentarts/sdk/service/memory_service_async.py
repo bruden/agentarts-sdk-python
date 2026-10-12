@@ -15,14 +15,11 @@ import httpx
 
 from agentarts.sdk.utils.constant import get_memory_endpoint, get_region
 from agentarts.sdk.utils.signer import SDKSigner
+from agentarts.sdk.utils.user_agent import build_user_agent
 
-from .http_client import APIException
+from .http_client import APIException, MemoryAPIException
 
 logger = logging.getLogger(__name__)
-
-
-class MemoryAPIException(APIException):
-    """Custom exception for Memory API errors."""
 
 
 class AsyncDataPlaneAuthenticationStrategy:
@@ -41,7 +38,6 @@ class AsyncDataPlaneAuthenticationStrategy:
         """Get headers with API_KEY authentication - identical to sync version."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk-python/0.0.1",
         }
 
         api_key = self._api_key or os.getenv("HUAWEICLOUD_SDK_MEMORY_API_KEY")
@@ -109,7 +105,6 @@ class AsyncControlPlaneAuthenticationStrategy:
         """Get base headers for control plane requests - identical to sync version."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk/0.0.1",
         }
 
         if hasattr(self, "client_request_id"):
@@ -227,6 +222,8 @@ class AsyncMemoryHttpService:
                 timeout=httpx.Timeout(self.timeout),
                 verify=verify,
             )
+            original_ua = self._async_client.headers.get("User-Agent", "")
+            self._async_client.headers["User-Agent"] = build_user_agent(original_ua)
         return self._async_client
 
     async def _make_request(
@@ -289,7 +286,15 @@ class AsyncMemoryHttpService:
 
             if response.status_code in {200, 201}:
                 if response.headers.get("content-type", "").startswith("application/json"):
-                    return response.json()
+                    try:
+                        return response.json()
+                    except ValueError as e:  # 覆盖 json.JSONDecodeError
+                        # 2xx 但响应体非合法 JSON：解析错误，区别于网络错误
+                        raise MemoryAPIException(
+                            status_code=response.status_code,
+                            error_code="PARSE_ERROR",
+                            error_msg=f"Failed to parse JSON response: {e}",
+                        ) from e
                 return {"response": response.text}
             if response.status_code == 204:
                 return {}
@@ -310,12 +315,12 @@ class AsyncMemoryHttpService:
         except Exception as e:
             if isinstance(e, MemoryAPIException):
                 raise
-            logger.exception(f"HTTP request failed: {e}")
+            logger.warning(f"Network request failed: {e}")
             raise MemoryAPIException(
-                status_code=503,
+                status_code=0,  # 0 = 无 HTTP 响应（对齐 BaseHTTPClient 先例）
                 error_code="NETWORK_ERROR",
-                error_msg=str(e)
-            )
+                error_msg=str(e),
+            ) from e  # 保留原始异常链，用户可访问 e.__cause__
 
     async def create_space(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new memory space - identical to sync version."""
