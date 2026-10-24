@@ -3,10 +3,10 @@
 // Spawns dist/index.mjs (the exact artifact an MCP host runs) against a mock
 // AgentArts data plane, then asserts:
 //   - MCP protocol behavior (initialize / tools/list / tools/call / errors)
-//   - the exact REST wire format: paths, Bearer auth, request bodies —
-//     the expected values mirror the Python SDK's data-plane branch
-//     (agentarts/sdk/service/memory_service.py) and its normalization layer
-//     (toolkit/plugins/memory/agentarts_client.py)
+//   - the exact REST wire format of search_memories: path, Bearer auth,
+//     request body — the expected values mirror the Python SDK's data-plane
+//     branch (agentarts/sdk/service/memory_service.py) and its normalization
+//     layer (toolkit/plugins/memory/agentarts_client.py)
 //
 // No network access, no real credentials, no test dependencies (node:test).
 
@@ -37,23 +37,9 @@ function mockHandler(req, res) {
       if (q === "boom") {
         res.statusCode = 500;
         res.end(JSON.stringify({ error_code: "InternalError", error_msg: "backend exploded" }));
-      } else if (q === "summary please") {
-        res.end(JSON.stringify({ records: [{ record: { content: "an episodic note", strategy_type: "episodic" }, score: 0.9 }] }));
-      } else if (q === "only semantic") {
-        res.end(JSON.stringify({ records: [{ record: { content: "a semantic fact", strategy_type: "semantic" }, score: 0.95 }] }));
       } else {
         res.end(JSON.stringify({ records: [{ record: { content: "found it", strategy_type: "semantic" }, score: 0.88 }], total: 1 }));
       }
-      return;
-    }
-    if (req.method === "GET" && req.url.startsWith(`${BASE}/memories`)) {
-      res.end(JSON.stringify({
-        items: [
-          { id: "mem-1", content: "semantic item", strategy_type: "semantic", created_at: "2026-01-01T00:00:00Z" },
-          { id: "mem-2", content: "preference item", memory_type: "user_preference", created_at: "2026-01-02T00:00:00Z" },
-        ],
-        total: 2,
-      }));
       return;
     }
     res.statusCode = 404;
@@ -145,13 +131,10 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     assert.ok(r.result.capabilities.tools);
   });
 
-  test("tools/list: exactly the three read-only tools", async () => {
+  test("tools/list: only search_memories is exposed", async () => {
     const r = await mcp.rpc("tools/list");
     const tools = r.result.tools;
-    assert.deepEqual(
-      tools.map((t) => t.name).sort(),
-      ["list_memories", "search_memories", "search_summary"],
-    );
+    assert.deepEqual(tools.map((t) => t.name), ["search_memories"]);
     // query is required; num/threshold have defaults and stay optional.
     assert.deepEqual(tools.find((t) => t.name === "search_memories").inputSchema.required, ["query"]);
     const props = tools.find((t) => t.name === "search_memories").inputSchema.properties;
@@ -175,33 +158,6 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     await mcp.callTool("search_memories", { query: "custom k", num: 12, threshold: 0.3 });
     const call = calls.find((c) => c.body?.query === "custom k");
     assert.deepEqual(call.body, { query: "custom k", top_k: 12, min_score: 0.3, actor_id: USER });
-  });
-
-  test("list_memories: limit/offset in query string, items normalized", async () => {
-    const out = await mcp.callTool("list_memories", { limit: 7, offset: 3 });
-    const call = calls.find((c) => c.method === "GET" && c.url === `${BASE}/memories?limit=7&offset=3`);
-    assert.ok(call, "list endpoint called with pagination");
-    assert.equal(out.total, 2);
-    assert.deepEqual(out.results[0], { id: "mem-1", content: "semantic item", type: "semantic", created_at: "2026-01-01T00:00:00Z" });
-    // memory_type fallback when strategy_type is absent (Python client parity).
-    assert.equal(out.results[1].type, "user_preference");
-  });
-
-  test("search_summary: returns summary-type hits directly", async () => {
-    const out = await mcp.callTool("search_summary", { query: "summary please", num: 3 });
-    // Python parity: search runs with top_k = max(num*3, 5).
-    const call = calls.find((c) => c.body?.query === "summary please");
-    assert.equal(call.body.top_k, 9);
-    assert.deepEqual(out.results, [{ content: "an episodic note", score: 0.9, type: "episodic" }]);
-  });
-
-  test("search_summary: falls back to list when search has no summary-type hits", async () => {
-    const out = await mcp.callTool("search_summary", { query: "only semantic", num: 3 });
-    // Search returned only "semantic" -> fallback lists memories and filters
-    // to summary types (mem-2, user_preference).
-    assert.deepEqual(out.results, [
-      { id: "mem-2", content: "preference item", type: "user_preference", created_at: "2026-01-02T00:00:00Z" },
-    ]);
   });
 
   test("backend 5xx: tool returns an error payload, not a protocol error", async () => {

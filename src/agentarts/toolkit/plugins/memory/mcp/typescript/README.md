@@ -8,13 +8,14 @@ AgentArts Memory（华为云）的 MCP 服务器，TypeScript 实现，**运行�
 
 ## 它提供什么
 
-只读召回（recall）工具 ×3——写入由平台 hooks / 插件负责，MCP 只暴露检索：
+目前只暴露一个只读召回工具（`list_memories` / `search_summary` 暂未用到，已移除，
+需要时从 git 历史恢复）：
 
 | Tool | 参数 | 说明 |
 | --- | --- | --- |
 | `search_memories` | `query`, `num=5`, `threshold=0.7` | 语义检索云端记忆 |
-| `list_memories` | `limit=10`, `offset=0` | 分页列出记忆记录 |
-| `search_summary` | `query`, `num=3` | 检索摘要类记忆（summary/episodic/user_preference），无结果时回退到列表 |
+
+`user_id` 不作为工具参数（模型不应控制身份），由服务端从环境变量解析（见下表）。
 
 ## 快速开始
 
@@ -57,7 +58,7 @@ npm test
 
 - MCP 协议行为：initialize 握手、tools/list、tools/call、未知工具报错、无凭证降级；
 - REST 线格式：请求路径、Bearer 头、请求体默认值（num=5 / threshold=0.7 / actor_id）、
-  分页参数、5xx 错误透传——这些"标准答案"逐项对照 Python SDK 的实现
+  5xx 错误透传——这些"标准答案"逐项对照 Python SDK 的实现
   （`memory_service.py` 数据面分支 + `agentarts_client.py` 归一化逻辑）；
 - 只读保证：全程无任何 `/sessions` 写路径端点被调用。
 
@@ -68,7 +69,6 @@ npm test
 | 操作 | 接口 | 请求体 |
 | --- | --- | --- |
 | 语义检索 | `POST /v1/core/spaces/{space_id}/memories/search` | `{query, top_k, min_score, actor_id}` → `{records: [{record, score}]}` |
-| 列出记忆 | `GET /v1/core/spaces/{space_id}/memories?limit=&offset=` | → `{items: [{id, content, strategy_type, memory_type, created_at}], total}` |
 
 错误处理：接口失败时工具返回 `{"error": "...", "results": [], "total": 0}` 而非抛协议错误，
 模型可以看到错误文本。

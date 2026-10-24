@@ -39,21 +39,6 @@ export interface SearchResponse {
   query?: string;
 }
 
-export interface MemoryRecord {
-  id: string;
-  content?: string;
-  strategy_type?: string;
-  memory_type?: string;
-  created_at?: string;
-}
-
-export interface ListMemoriesResponse {
-  items?: MemoryRecord[];
-  total?: number;
-  limit?: number;
-  offset?: number;
-}
-
 export class MemoryDataPlane {
   constructor(
     private readonly baseUrl: string,
@@ -68,14 +53,6 @@ export class MemoryDataPlane {
       "POST",
       `/v1/core/spaces/${this.spaceId}/memories/search`,
       body,
-    );
-  }
-
-  /** GET /v1/core/spaces/{space_id}/memories?limit=&offset= */
-  async listMemories(limit: number, offset: number): Promise<ListMemoriesResponse> {
-    return this.request(
-      "GET",
-      `/v1/core/spaces/${this.spaceId}/memories?limit=${limit}&offset=${offset}`,
     );
   }
 
