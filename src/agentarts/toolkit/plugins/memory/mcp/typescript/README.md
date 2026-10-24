@@ -13,7 +13,7 @@ AgentArts Memory（华为云）的 MCP 服务器，TypeScript 实现，**运行�
 
 | Tool | 参数 | 说明 |
 | --- | --- | --- |
-| `search_memories` | `query`, `strategy_type`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型（semantic/episodic/user_preference）和时间范围（Unix 毫秒）过滤；可选参数未传时不进请求体；`strategy_type` 传非法值会被后端拒绝（`Malformed request body`） |
+| `search_memories` | `query`, `strategy_type`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型和时间范围（Unix 毫秒）过滤；可选参数未传时不进请求体。`strategy_type` 实测可用值：`semantic` / `episodic` / `user_preference` / `summary` / `procedural` / `event`（枚举无公开文档，为后端探测所得；非法值会被拒：`Malformed request body`） |
 
 `user_id` 不作为工具参数（模型不应控制身份），由服务端从环境变量解析（见下表）。
 

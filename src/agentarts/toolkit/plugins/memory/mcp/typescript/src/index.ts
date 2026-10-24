@@ -68,7 +68,8 @@ server.registerTool(
   {
     description:
       "Search cloud memories by semantic similarity. Optional filters: " +
-      "strategy_type (memory type — invalid values are rejected by the backend), " +
+      "strategy_type (memory type: semantic, episodic, user_preference, summary, " +
+      "procedural or event — other values are rejected by the backend), " +
       "start_time/end_time (Unix milliseconds).",
     inputSchema: {
       query: z.string().describe("Natural-language search query."),
