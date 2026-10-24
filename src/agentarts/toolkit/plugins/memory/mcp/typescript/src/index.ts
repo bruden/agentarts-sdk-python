@@ -76,7 +76,7 @@ server.registerTool(
       strategy_type: z
         .string()
         .optional()
-        .describe("Filter by memory type (e.g. semantic, episodic, user_preference)."),
+        .describe("Filter by memory type: semantic, episodic, user_preference, summary or procedural."),
       top_k: z
         .number()
         .int()
