@@ -844,6 +844,8 @@ class MemoryClient:
                 - min_score: Minimum similarity score, between 0-1
                 - strategy_type: Memory type filter (semantic/episodic/user_preference)
                 - created_start / created_end: Time range filter
+                - only_actived: When True, return only currently active memories;
+                  when False (default), return all matched memories
 
         Returns:
             MemorySearchResponse: Search results, containing:
