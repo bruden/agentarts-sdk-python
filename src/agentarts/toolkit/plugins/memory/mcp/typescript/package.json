@@ -1,7 +1,7 @@
 {
   "name": "agentarts-memory-mcp",
   "version": "1.0.0",
-  "description": "AgentArts Memory MCP server (TypeScript, zero runtime deps) \u2014 read-only recall tools over the Huawei Cloud AgentArts Memory data-plane REST API. Single-file bundled dist/index.mjs, runs with Node >= 18 only.",
+  "description": "AgentArts Memory MCP server (TypeScript, zero runtime deps) \u2014 a read-only recall tool (search_memories) over the Huawei Cloud AgentArts Memory data-plane REST API. Single-file bundled dist/index.mjs, runs with Node >= 18 only.",
   "type": "module",
   "license": "Apache-2.0",
   "bin": {

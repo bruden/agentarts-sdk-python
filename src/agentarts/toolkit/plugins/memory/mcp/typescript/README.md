@@ -3,7 +3,7 @@
 AgentArts Memory（华为云）的 MCP 服务器，TypeScript 实现，**运行时零依赖**。
 
 为什么不用 Python 版：Python 版依赖 `agentarts-sdk`（连带 `mcp`、`requests` 等一串包），
-部署负担重；本包构建后产出**单个 `dist/index.mjs`（约 740KB，所有依赖已内联）**，
+部署负担重；本包构建后产出**单个 `dist/index.mjs`（约 750KB，所有依赖已内联）**，
 运行时零依赖——目标机器只需要 Node >= 18，不需要 Python 环境。
 
 ## 它提供什么
@@ -13,7 +13,7 @@ AgentArts Memory（华为云）的 MCP 服务器，TypeScript 实现，**运行�
 
 | Tool | 参数 | 说明 |
 | --- | --- | --- |
-| `search_memories` | `query`, `strategy_type`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型（semantic/episodic/user_preference）和时间范围过滤；可选参数未传时不进请求体 |
+| `search_memories` | `query`, `strategy_type`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型（semantic/episodic/user_preference）和时间范围（Unix 毫秒）过滤；可选参数未传时不进请求体；`strategy_type` 传非法值会被后端拒绝（`Malformed request body`） |
 
 `user_id` 不作为工具参数（模型不应控制身份），由服务端从环境变量解析（见下表）。
 

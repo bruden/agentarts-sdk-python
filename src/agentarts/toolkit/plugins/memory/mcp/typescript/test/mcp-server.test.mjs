@@ -135,7 +135,7 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     const r = await mcp.rpc("tools/list");
     const tools = r.result.tools;
     assert.deepEqual(tools.map((t) => t.name), ["search_memories"]);
-    // query is required; num/threshold have defaults and stay optional.
+    // query is required; top_k/min_score have defaults and stay optional.
     assert.deepEqual(tools.find((t) => t.name === "search_memories").inputSchema.required, ["query"]);
     const props = tools.find((t) => t.name === "search_memories").inputSchema.properties;
     assert.deepEqual(Object.keys(props).sort(), [

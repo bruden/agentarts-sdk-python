@@ -15,7 +15,6 @@ export const ENV_USER_ID = "AGENTARTS_MEMORY_USER_ID";
 
 export const DEFAULT_REGION = "cn-southwest-2";
 export const DEFAULT_TOP_K = 5;
-export const DEFAULT_LIST_LIMIT = 10;
 export const DEFAULT_MIN_SCORE = 0.7;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -42,11 +41,6 @@ export function getApiKey(): string {
 
 export function getSpaceId(): string {
   return process.env[ENV_SPACE_ID] || "";
-}
-
-/** True when the minimal credentials for data-plane calls are present. */
-export function isConfigured(): boolean {
-  return Boolean(getApiKey() && getSpaceId());
 }
 
 // ── platform detection (parity with the Python MCP server) ──

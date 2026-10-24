@@ -66,7 +66,10 @@ function jsonResult(payload: unknown) {
 server.registerTool(
   "search_memories",
   {
-    description: "Search cloud memories by semantic similarity.",
+    description:
+      "Search cloud memories by semantic similarity. Optional filters: " +
+      "strategy_type (memory type — invalid values are rejected by the backend), " +
+      "start_time/end_time (Unix milliseconds).",
     inputSchema: {
       query: z.string().describe("Natural-language search query."),
       strategy_type: z
