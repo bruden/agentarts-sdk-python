@@ -36,10 +36,69 @@ node dist/index.mjs        # stdio transport，进程由 MCP 宿主拉起
 | `AGENTARTS_MEMORY_SPACE_ID` | ✅ | Space ID | — |
 | `HUAWEICLOUD_SDK_REGION` | | 区域（也认 `HUAWEICLOUD_REGION` / `OS_REGION_NAME`） | `cn-southwest-2` |
 | `AGENTARTS_MEMORY_DATA_ENDPOINT` | | 数据面地址覆盖 | `https://memory.{region}.huaweicloud-agentarts.com` |
-| `AGENTARTS_MEMORY_USER_ID` | | 记忆 actor_id | 按平台推断：`cc-user` / `codex-user` / `opencode-user` / `__default__` |
+| `AGENTARTS_MEMORY_USER_ID` | ⚠️ | 记忆 actor_id，**必须与写入侧一致**，否则检索静默返回空 | 按平台推断：`cc-user` / `codex-user` / `opencode-user` / `__default__` |
 | `AGENTARTS_MEMORY_PLATFORM` | | 平台标识 | 自动探测（`*_PLUGIN_ROOT` 环境变量） |
 
 
+
+## MCP 配置（客户端注册）
+
+### OpenCode（`~/.config/opencode/opencode.json` 或项目 `.opencode/opencode.json`）
+
+```json
+{
+  "mcp": {
+    "agentarts_memory": {
+      "type": "local",
+      "command": ["node", "/path/to/mcp/typescript/dist/index.mjs"],
+      "environment": {
+        "HUAWEICLOUD_SDK_MEMORY_API_KEY": "<api-key>",
+        "AGENTARTS_MEMORY_SPACE_ID": "<space-id>",
+        "AGENTARTS_MEMORY_USER_ID": "<actor-id>"
+      },
+      "enabled": true,
+      "timeout": 30000
+    }
+  }
+}
+```
+
+> OpenCode 的 per-server `timeout` 默认 **5000ms**；数据面调用跨公网，建议显式调大。
+
+### Claude Code（`~/.claude/settings.json`）
+
+```json
+{
+  "mcpServers": {
+    "agentarts_memory": {
+      "command": "node",
+      "args": ["/path/to/mcp/typescript/dist/index.mjs"],
+      "env": {
+        "HUAWEICLOUD_SDK_MEMORY_API_KEY": "<api-key>",
+        "AGENTARTS_MEMORY_SPACE_ID": "<space-id>",
+        "AGENTARTS_MEMORY_USER_ID": "<actor-id>"
+      }
+    }
+  }
+}
+```
+
+### Codex（`~/.codex/config.toml`）
+
+```toml
+[mcp_servers.agentarts_memory]
+command = "node"
+args = ["/path/to/mcp/typescript/dist/index.mjs"]
+
+[mcp_servers.agentarts_memory.env]
+HUAWEICLOUD_SDK_MEMORY_API_KEY = "<api-key>"
+AGENTARTS_MEMORY_SPACE_ID = "<space-id>"
+AGENTARTS_MEMORY_USER_ID = "<actor-id>"
+```
+
+> **重要**：`AGENTARTS_MEMORY_USER_ID` 必须与写入侧（capture 插件 / hook 写入记忆时使用的
+> actor_id）一致，否则检索会**静默返回空结果**（HTTP 200、零记录、无任何报错）——
+> 这是实测确认的行为，排查时优先检查这一项。
 
 ## 安装方式
 
