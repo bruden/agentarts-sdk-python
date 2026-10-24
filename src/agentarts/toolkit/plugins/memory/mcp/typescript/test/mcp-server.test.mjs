@@ -138,7 +138,9 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     // query is required; num/threshold have defaults and stay optional.
     assert.deepEqual(tools.find((t) => t.name === "search_memories").inputSchema.required, ["query"]);
     const props = tools.find((t) => t.name === "search_memories").inputSchema.properties;
-    assert.deepEqual(Object.keys(props).sort(), ["num", "query", "threshold"]);
+    assert.deepEqual(Object.keys(props).sort(), [
+      "end_time", "min_score", "query", "start_time", "strategy_type", "top_k",
+    ]);
   });
 
   test("search_memories: REST wire format (path, bearer auth, body defaults)", async () => {
@@ -146,7 +148,9 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     const call = calls.find((c) => c.url === `${BASE}/memories/search` && c.body.query === "hello world");
     assert.ok(call, "search endpoint was called");
     assert.equal(call.auth, `Bearer ${API_KEY}`);
-    // Defaults mirror the Python server: num=5, threshold=0.7, actor_id from env.
+    // Defaults mirror the Python server: top_k=5, min_score=0.7, actor_id from
+    // env. deepEqual is strict, so this also proves the optional filters
+    // (strategy_type/start_time/end_time) are omitted from the body when unset.
     assert.deepEqual(call.body, { query: "hello world", top_k: 5, min_score: 0.7, actor_id: USER });
     // Normalized result: {content, score, type} from records[].record/score.
     assert.deepEqual(out.results, [{ content: "found it", score: 0.88, type: "semantic" }]);
@@ -154,10 +158,25 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     assert.equal(out.query, "hello world");
   });
 
-  test("search_memories: custom num/threshold are forwarded", async () => {
-    await mcp.callTool("search_memories", { query: "custom k", num: 12, threshold: 0.3 });
+  test("search_memories: all six parameters are forwarded", async () => {
+    await mcp.callTool("search_memories", {
+      query: "custom k",
+      strategy_type: "episodic",
+      top_k: 12,
+      min_score: 0.3,
+      start_time: 1760000000000,
+      end_time: 1770000000000,
+    });
     const call = calls.find((c) => c.body?.query === "custom k");
-    assert.deepEqual(call.body, { query: "custom k", top_k: 12, min_score: 0.3, actor_id: USER });
+    assert.deepEqual(call.body, {
+      query: "custom k",
+      strategy_type: "episodic",
+      top_k: 12,
+      min_score: 0.3,
+      actor_id: USER,
+      start_time: 1760000000000,
+      end_time: 1770000000000,
+    });
   });
 
   test("backend 5xx: tool returns an error payload, not a protocol error", async () => {

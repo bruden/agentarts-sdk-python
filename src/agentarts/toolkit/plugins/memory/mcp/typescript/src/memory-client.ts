@@ -6,7 +6,7 @@
 // hooks/plugins, so this server needs no session management.
 
 import { DEFAULT_MIN_SCORE, DEFAULT_TOP_K } from "./config.js";
-import { MemoryDataPlane, SearchRecord } from "./api.js";
+import { MemoryDataPlane, SearchRecord, SearchRequestBody } from "./api.js";
 
 export interface SearchItem {
   content: string;
@@ -58,21 +58,32 @@ function normalizeSearchResults(resp: { records?: SearchRecord[]; results?: Sear
   });
 }
 
+export interface SearchOptions {
+  query: string;
+  userId: string;
+  strategy_type?: string;
+  top_k?: number;
+  min_score?: number;
+  start_time?: number;
+  end_time?: number;
+}
+
 export class MemoryClient {
   constructor(private readonly api: MemoryDataPlane) {}
 
-  async searchMemories(
-    query: string,
-    userId: string,
-    num: number = DEFAULT_TOP_K,
-    threshold: number = DEFAULT_MIN_SCORE,
-  ): Promise<SearchItem[]> {
-    const resp = await this.api.searchMemories({
-      query,
-      top_k: num,
-      min_score: threshold,
-      actor_id: userId,
-    });
+  /** Semantic search; optional filters are omitted from the body when unset
+   *  (same as the Python SDK's MemorySearchFilter.to_dict). */
+  async searchMemories(opts: SearchOptions): Promise<SearchItem[]> {
+    const body: SearchRequestBody = {
+      query: opts.query,
+      top_k: opts.top_k ?? DEFAULT_TOP_K,
+      min_score: opts.min_score ?? DEFAULT_MIN_SCORE,
+      actor_id: opts.userId,
+    };
+    if (opts.strategy_type !== undefined) body.strategy_type = opts.strategy_type;
+    if (opts.start_time !== undefined) body.start_time = opts.start_time;
+    if (opts.end_time !== undefined) body.end_time = opts.end_time;
+    const resp = await this.api.searchMemories(body);
     return normalizeSearchResults(resp);
   }
 }

@@ -13,7 +13,7 @@ AgentArts Memory（华为云）的 MCP 服务器，TypeScript 实现，**运行�
 
 | Tool | 参数 | 说明 |
 | --- | --- | --- |
-| `search_memories` | `query`, `num=5`, `threshold=0.7` | 语义检索云端记忆 |
+| `search_memories` | `query`, `strategy_type`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型（semantic/episodic/user_preference）和时间范围过滤；可选参数未传时不进请求体 |
 
 `user_id` 不作为工具参数（模型不应控制身份），由服务端从环境变量解析（见下表）。
 
@@ -68,7 +68,7 @@ npm test
 
 | 操作 | 接口 | 请求体 |
 | --- | --- | --- |
-| 语义检索 | `POST /v1/core/spaces/{space_id}/memories/search` | `{query, top_k, min_score, actor_id}` → `{records: [{record, score}]}` |
+| 语义检索 | `POST /v1/core/spaces/{space_id}/memories/search` | `{query, strategy_type?, top_k, min_score, actor_id, start_time?, end_time?}`（可选字段未设时省略）→ `{records: [{record, score}]}` |
 
 错误处理：接口失败时工具返回 `{"error": "...", "results": [], "total": 0}` 而非抛协议错误，
 模型可以看到错误文本。

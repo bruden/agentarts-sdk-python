@@ -21,9 +21,12 @@ export class MemoryApiError extends Error {
 
 export interface SearchRequestBody {
   query: string;
+  strategy_type?: string;
   top_k?: number;
   min_score?: number;
   actor_id?: string;
+  start_time?: number;
+  end_time?: number;
 }
 
 /** Search hit as returned by the backend: the memory record plus its score. */

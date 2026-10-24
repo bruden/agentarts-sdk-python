@@ -69,24 +69,48 @@ server.registerTool(
     description: "Search cloud memories by semantic similarity.",
     inputSchema: {
       query: z.string().describe("Natural-language search query."),
-      num: z
+      strategy_type: z
+        .string()
+        .optional()
+        .describe("Filter by memory type (e.g. semantic, episodic, user_preference)."),
+      top_k: z
         .number()
         .int()
         .min(1)
         .max(100)
         .default(DEFAULT_TOP_K)
         .describe("Maximum results to return (1-100)."),
-      threshold: z
+      min_score: z
         .number()
         .min(0)
         .max(1)
         .default(DEFAULT_MIN_SCORE)
         .describe("Minimum similarity score (0.0-1.0)."),
+      start_time: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Time range start, Unix timestamp in milliseconds."),
+      end_time: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Time range end, Unix timestamp in milliseconds."),
     },
   },
-  async ({ query, num, threshold }) => {
+  async ({ query, strategy_type, top_k, min_score, start_time, end_time }) => {
     try {
-      const results = await getClient().searchMemories(query, resolveUserId(), num, threshold);
+      const results = await getClient().searchMemories({
+        query,
+        userId: resolveUserId(),
+        strategy_type,
+        top_k,
+        min_score,
+        start_time,
+        end_time,
+      });
       return jsonResult({ results, total: results.length, query });
     } catch (e) {
       log("search_memories failed:", errorText(e));
