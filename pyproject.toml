@@ -58,7 +58,6 @@ dependencies = [
     "pyjwt>=2.8.0",
     "cryptography>=41.0.0",
     "docker>=7.0.0",
-    "mcp>=2.0.0",
 ]
 
 [dependency-groups]
@@ -79,6 +78,8 @@ dev = [
     "langgraph>=1.0.0",
     "langchain>=1.0.0",
     "langchain-core>=1.0.0",
+    # Needed by the memory MCP server unit tests; it is an optional runtime extra.
+    "mcp>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -132,8 +133,13 @@ docs = [
 tui = [
     "textual>=0.86.0",
 ]
+mcp = [
+    # Required only for the memory MCP server
+    # (agentarts.toolkit.plugins.memory.mcp.server), not for the SDK itself.
+    "mcp>=2.0.0",
+]
 all = [
-    "agentarts-sdk[web,langchain,langgraph,google-adk,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui]",
+    "agentarts-sdk[web,langchain,langgraph,google-adk,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui,mcp]",
 ]
 
 [project.urls]
